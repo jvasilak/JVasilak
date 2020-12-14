@@ -1,3 +1,4 @@
+
 ## Define Parameters
 semesters = int(input('How many semesters of college have you completed? ')) # Determines how many sememsters of college the user has already completed
 total_credits = float(input('How many total credit hours have you completed? ')) # Determines how many total credit hours the user has completed
