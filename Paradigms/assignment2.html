@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>Paradigms Assignment 2</title>
+	<style>
+   	 * { padding: 0; margin: 0; }
+   	 canvas { background: rgb(209, 206, 206); display: block; margin: 0 auto; }
+	</style>
+</head>
+<body>
+
+<canvas id="scoreboard" width="240" height="30"></canvas>
+<canvas id="myCanvas" width="480" height="320"></canvas>
+<script>
+    // Cut and paste your jsfiddle javascript code here.
+    // Variable declarations
+    const canvas = document.getElementById("myCanvas");
+    const scoreboard = document.getElementById("scoreboard");
+    const ctx = canvas.getContext("2d");
+    const scoreCtx = scoreboard.getContext("2d");
+    const ballRadius = 10;
+    let x = canvas.width/2;
+    let y = canvas.height-30;
+    let dx = randomInt(1, 5);
+    let dy = randomInt(1, 5);
+    const paddleHeight = 60;
+    const paddleWidth = 10;
+    let paddle1Y = (canvas.height-paddleHeight)/2;
+    let paddle2Y = (canvas.height-paddleHeight)/2;
+    const goalLower = canvas.height - 80;
+    const goalUpper = canvas.height - 240;
+    let upPressed = false;
+    let downPressed = false;
+    let userScore = 0;
+    let cpuScore = 0;
+    let ballColor = "#0095DD";
+    let playerHit = 0;
+    let cpuSpeed = 1;
+    // Checks for keys pressed
+    document.addEventListener("keydown", keyDownHandler, false);
+    document.addEventListener("keyup", keyUpHandler, false);
+
+    // Runs the game
+    setInterval(draw, 10);
+
+    // function runs the game by animating the screen and updating values as needed
+    function draw() {
+        updateScoreboard();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawField();
+        drawBall();
+        drawPaddle1();
+        cpuMove();
+        drawPaddle2();
+        // When ball hits player
+        if (checkPlayerCollision()) {
+            playerHit = 3;
+        }
+        // When user or cpu scores
+        else if(checkUserGoal()) {
+            reset();
+            userKickOff();
+        }
+        else if (checkCpuGoal()) {
+            reset();
+            cpuKickOff();
+        }
+        // No goals or player collisions
+        else {
+            if(x + dx > canvas.width-ballRadius || x + dx < ballRadius) {
+                dx = -dx;
+                playerHit -= 1;
+                ballColor = randomColor();
+            }
+            if(y + dy > canvas.height-ballRadius || y + dy < ballRadius) {
+                dy = -dy;
+                playerHit -= 1;
+                ballColor = randomColor();
+            }
+
+            if(upPressed) {
+                paddle1Y += 7;
+                if (paddle1Y + paddleHeight > canvas.height){
+                    paddle1Y = canvas.height - paddleHeight;
+                }
+            }
+            else if(downPressed) {
+                paddle1Y -= 7;
+                if (paddle1Y < 0){
+                    paddle1Y = 0;
+                }
+            }
+        }
+        // Ball moves 2 times speed if a player has recently touched the ball 
+        if(playerHit > 0) {
+            x += 2*dx;
+            y += 2*dy;
+        }
+        else {
+            x += dx;
+            y += dy;
+        }
+    }
+    // function finds a random value and returns it
+    function randomInt(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1) + min);
+    }
+
+    // function creates a random color and returns it
+    function randomColor() {
+        let maxColor = 0xFFFFFF;
+        let randColor = Math.floor(Math.random() * maxColor).toString();
+        let colorString = randColor.padStart(6, 0);
+        return `#${colorString.toUpperCase()}`;
+    }
+
+    // function animates the scoreboard
+    function updateScoreboard() {
+        scoreCtx.clearRect(0, 0, canvas.width, canvas.height);
+        scoreCtx.font = "20px Arial";
+        scoreCtx.fillStyle = "black";
+        scoreCtx.fillText(`${cpuScore} Scoreboard ${userScore}`,10,20);
+    }
+
+    // function checks if a key has been released
+    function keyUpHandler(e) {
+        // up arrow
+        if(e.key == "Up" || e.key == "ArrowUp") {
+            downPressed = false;
+        }
+        // down arrow
+        else if(e.key == "Down" || e.key == "ArrowDown") {
+            upPressed = false;
+        }
+    }
+
+    // function checks if a key has been pressed
+    function keyDownHandler(e) {
+        if(e.key == "Up" || e.key == "ArrowUp") {
+            downPressed = true;
+        }
+        else if(e.key == "Down" || e.key == "ArrowDown") {
+            upPressed = true;
+        }
+        // 1 key
+        else if (e.key == "1" || e.key == "1") {
+            cpuSpeed = 1;
+        }
+        // 2 key
+        else if (e.key == "2" || e.key == "2") {
+            cpuSpeed = 2;
+        }
+        // 3 key
+        else if (e.key == "3" || e.key == "3") {
+            cpuSpeed = 3;
+        }
+        // 4 key
+        else if (e.key == "4" || e.key == "4") {
+            cpuSpeed = 4;
+        }
+        // 5 key
+        else if (e.key == "5" || e.key == "5") {
+            cpuSpeed = 5;
+        }
+    }
+
+    // draws the playing field on the canvas
+    function drawField() {
+        // Draw the lines around the field
+        ctx.beginPath();
+        ctx.strokeStyle = "black";
+        ctx.moveTo(0, 0);
+        ctx.lineTo(canvas.width, 0);
+        ctx.lineTo(canvas.width, goalUpper);
+        ctx.moveTo(canvas.width, goalLower);
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.lineTo(0, canvas.height);
+        ctx.lineTo(0, goalLower);
+        ctx.moveTo(0, goalUpper);
+        ctx.lineTo(0, 0);
+        ctx.stroke();
+        ctx.closePath();
+
+        // Draw the goal boxes
+        ctx.beginPath();
+        ctx.rect(0, goalUpper, 5, goalLower-goalUpper);
+        ctx.fillStyle = "white";
+        ctx.fill();
+        ctx.closePath();
+
+        ctx.beginPath();
+        ctx.rect(canvas.width-5, goalUpper, 5, goalLower-goalUpper);
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    // function draws the ball on the screen
+    function drawBall() {
+        ctx.beginPath();
+        ctx.arc(x, y, ballRadius, 0, Math.PI*2);
+        ctx.fillStyle = ballColor;
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    // function draws the user's paddle on the screen
+    function drawPaddle1() {
+        ctx.beginPath();
+        ctx.rect(canvas.width-paddleWidth, paddle1Y, paddleWidth, paddleHeight);
+        ctx.fillStyle = "#0095DD";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    // function draws the cpu's paddle on the screen
+    function drawPaddle2() {
+        ctx.beginPath();
+        ctx.rect(0, paddle2Y, paddleWidth, paddleHeight);
+        ctx.fillStyle = "#0095DD";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    // function checks if the user scored
+    function checkUserGoal() {
+        if(x + dx < ballRadius && y + dy > goalUpper && y + dy < goalLower) {
+            userScore += 1;
+            return true;
+        }
+        return false;
+    }
+
+    // function checks if the cpu scored
+    function checkCpuGoal() {
+        if(x + dx > canvas.width-ballRadius && y + dy > goalUpper && y + dy < goalLower) {
+            cpuScore += 1;
+            return true;
+        }
+        return false;
+    }
+
+    // function resets the board after a goal
+    function reset() {
+        x = canvas.width/2;
+        y = canvas.height-30;
+        playerHit = 0;
+        paddle1Y = (canvas.height-paddleHeight)/2;
+        paddle2Y = (canvas.height-paddleHeight)/2;
+    }
+
+    // checks if either the cpu or player has just touched the ball
+    function checkPlayerCollision() {
+        let collision = false;
+        // front collisions
+        if (y + dy >= paddle1Y-ballRadius && y + dy <= paddle1Y+paddleHeight+ballRadius && x + dx >= canvas.width-paddleWidth-ballRadius) {
+            dx = -dx;
+            ballColor = randomColor();
+            collision = true;
+        }
+        else if (y + dy >= paddle2Y-ballRadius && y + dy <= paddle2Y+paddleHeight+ballRadius && x + dx <= 10+ballRadius) {
+            dx = -dx;
+            ballColor = randomColor();
+            collision = true;
+        }
+        return collision;
+    }
+
+    // sends the ball in the user's direction
+    function userKickOff() {
+        dx = randomInt(1, 5);
+        dy = randomInt(1, 5);
+    }
+
+    // sends the ball in the cpu's direction
+    function cpuKickOff() {
+        dx = -1 * randomInt(1, 5);
+        dy = -1 * randomInt(1, 5);
+    }
+
+    // function determines the next move of the cpu so that it actively plays the game
+    function cpuMove() {
+        if (x > canvas.width/2 && dx < 0) {
+            if (Math.abs(paddle2Y - canvas.height/2 - paddleHeight/2) <= 3) {
+                paddle2Y = Math.ceil(canvas.height/2 - paddleHeight/2);
+            }
+            else if (paddle2Y > canvas.height/2 - paddleHeight/2){
+                paddle2Y =  paddle2Y - cpuSpeed;
+            }
+            else if (paddle2Y < canvas.height/2 - paddleHeight/2) {
+                paddle2Y = paddle2Y + cpuSpeed;
+            }
+        }
+        else if (dx < 0) {
+            if (paddle2Y > y) {
+                paddle2Y = paddle2Y - cpuSpeed;
+            }
+            else if (paddle2Y < y && paddle2Y < canvas.height-paddleHeight) {
+                paddle2Y = paddle2Y + cpuSpeed;
+            }
+        }
+    }
+
+</script>
+
+</body>
+</html>
